@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1787119990332,
+      "tag": "0000_busy_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1787128564450,
+      "tag": "0001_faithful_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787129638780,
+      "tag": "0002_skinny_ender_wiggin",
+      "breakpoints": true
+    }
+  ]
 }

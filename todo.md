@@ -1,0 +1,22 @@
+# Project TODO
+
+- [ ] Create a responsive premium VV API shell with a persistent desktop workspace and mobile-first research navigation.
+- [ ] Implement an accessible conversational research workspace with markdown rendering, source cards, thinking-state disclosure, and saved threads.
+- [ ] Define secure user-scoped data models for conversations, research runs, sources, knowledge items, extraction schemas, analytics snapshots, and monitors.
+- [ ] Build a unified research pipeline that accepts Firecrawl, browser-session, and uploaded-document results and persists normalized source records.
+- [ ] Add Firecrawl-powered Search, Scrape, Site Map, Agent Research, and structured-field extraction actions with bounded request validation.
+- [ ] Implement secure Anchor Browser onboarding and headless-session integration behind stored server-side credentials and user approval gates.
+- [ ] Add an analytics overlay for researched domains with provider-backed traffic, referrer, keyword, and audience data plus transparent unavailable states.
+- [ ] Add personal knowledge-base browsing, source provenance, search, tagging, and document-upload ingestion for supported file types.
+- [ ] Implement explicit research monitor scheduling, change detection, owner notifications, and a user-managed schedule interface.
+- [ ] Add external service configuration, permission controls, rate limits, error handling, and audit events without exposing secrets to the client.
+- [ ] Write database migrations, unit tests, integration tests, and setup documentation for all delivered features.
+- [ ] Validate visual quality and mobile behavior, save a final checkpoint, and synchronize the selected GitHub repository.
+- [ ] Add a controlled worker-agent registry with task-purpose boundaries, concurrency caps, time and source budgets, and mandatory return-to-VV provenance records.
+- [ ] Add an approved-source catalog for free and open data, API, SDK, and CRM integrations, including license, terms, rate-limit, and credential requirements.
+- [ ] Build a delegation dashboard where the owner can review, approve, pause, cancel, and inspect every worker research task and its source trail.
+- [ ] Enforce central-only knowledge writes, duplicate detection, content hashing, and audit logs so worker findings improve VV’s knowledge base without uncontrolled propagation.
+- [ ] Add elastic worker-pool lifecycle rules: per-task retirement, automatic cleanup, bounded tiered concurrency, source and time budgets, and owner-approved capacity changes between research cycles.
+- [ ] Add worker-pool metrics that distinguish completed, retired, queued, and active workers without retaining unnecessary worker state or credentials.
+- [ ] Implement and validate the official Firecrawl agent-onboarding flow as the secure fallback for activating live VV research when no valid user API key is configured.
+- [ ] Force-push the intended VV API branch to the selected GitHub repository after verifying its remote and branch target.
