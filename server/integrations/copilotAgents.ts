@@ -81,10 +81,13 @@ export async function dispatchCopilotTask(input: DispatchCopilotTaskInput): Prom
     const message = typeof payload.message === "string" ? payload.message : `GitHub issue creation failed with status ${response.status}.`;
     return { ok: false, configured: true, error: message.slice(0, 500) };
   }
+  if (typeof payload.number !== "number" || typeof payload.html_url !== "string") {
+    return { ok: false, configured: true, error: "GitHub returned an unexpected issue payload (missing number or html_url)." };
+  }
   return {
     ok: true,
-    issueNumber: typeof payload.number === "number" ? payload.number : 0,
-    issueUrl: typeof payload.html_url === "string" ? payload.html_url : "",
+    issueNumber: payload.number,
+    issueUrl: payload.html_url,
   };
 }
 

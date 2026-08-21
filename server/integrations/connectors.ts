@@ -78,8 +78,16 @@ let cachedRegistry: ConnectionsRegistry | null = null;
 
 export function loadConnectionsRegistry(): ConnectionsRegistry {
   if (cachedRegistry) return cachedRegistry;
-  const raw = readFileSync(join(process.cwd(), "connections.json"), "utf8");
-  cachedRegistry = JSON.parse(raw) as ConnectionsRegistry;
+  try {
+    const raw = readFileSync(join(process.cwd(), "connections.json"), "utf8");
+    cachedRegistry = JSON.parse(raw) as ConnectionsRegistry;
+  } catch (error) {
+    console.warn(
+      "[Connectors] Failed to load connections.json; using empty registry:",
+      error instanceof Error ? error.message : error,
+    );
+    cachedRegistry = {};
+  }
   return cachedRegistry;
 }
 
@@ -103,11 +111,12 @@ export function getConnectorsState(): ConnectorsState {
   const integrations: ConnectorStatus[] = (registry.integrations ?? []).map(integration => {
     const requiredEnv = REQUIRED_ENV_BY_INTEGRATION[integration.id] ?? [];
     const missingEnv = requiredEnv.filter(name => !envPresent(name));
+    // Integrations with no credential requirements are considered configured.
     return {
       id: integration.id,
       kind: integration.kind ?? "integration",
       description: integration.description ?? "",
-      configured: requiredEnv.length > 0 && missingEnv.length === 0,
+      configured: missingEnv.length === 0,
       requiredEnv,
       missingEnv,
       triggers: integration.triggers ?? [],
