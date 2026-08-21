@@ -43,8 +43,15 @@
     {
       "id": "manus",
       "kind": "task-sink",
-      "description": "Manus task intake via email. Sending a message to the personalized Manus task email creates a task; the workflow email receives status/notification copies.",
-      "triggers": ["email"],
+      "credentialGated": true,
+      "description": "Manus integration: (1) task intake via email — sending a message to the personalized Manus task email creates a task; (2) direct API connector inside VV-API (server/integrations/manus.ts) giving full task access (list/get/create) over the Manus API.",
+      "triggers": ["email", "trpc:integrations.manus.*"],
+      "api": {
+        "envVars": ["MANUS_API_KEY", "MANUS_API_BASE"],
+        "authHeader": "x-manus-api-key",
+        "defaultBase": "https://api.manus.ai",
+        "capabilities": ["tasks.list", "tasks.get", "tasks.create"]
+      },
       "channelRouting": {
         "manusWorkflowEmail": "notifications and status",
         "manusTaskbotEmail": "task creation"
@@ -70,6 +77,21 @@
       "channelRouting": {
         "manusWorkflowEmail": "integration status notifications only",
         "manusTaskbotEmail": "not routed"
+      }
+    },
+    {
+      "id": "vv-api",
+      "kind": "app-runtime",
+      "credentialGated": true,
+      "description": "VV-API in-app integration surface (server/integrationsRouter.ts, admin-only tRPC): integrations.status exposes this registry's runtime state; integrations.manus.* gives full Manus task access; integrations.copilot.* dispatches Copilot AI agent tasks as GitHub issues (server/integrations/copilotAgents.ts) using HUB_GITHUB_TOKEN, including Manus→Copilot sync. See docs/vv-api-manus-integration.md.",
+      "triggers": ["trpc:integrations.status", "trpc:integrations.manus.*", "trpc:integrations.copilot.*"],
+      "api": {
+        "envVars": ["MANUS_API_KEY", "MANUS_API_BASE", "HUB_GITHUB_TOKEN"],
+        "capabilities": ["connectors.status", "manus.tasks.list", "manus.tasks.get", "manus.tasks.create", "copilot.dispatchTask", "copilot.syncFromManus"]
+      },
+      "channelRouting": {
+        "manusWorkflowEmail": "not routed directly; CI workflows handle notifications",
+        "manusTaskbotEmail": "not routed directly; email intake remains via dispatch-task-email workflow"
       }
     }
   ]

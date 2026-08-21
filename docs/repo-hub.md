@@ -146,3 +146,5 @@ works.
   `hub.config.json`. Rotate `HUB_ORG_TOKEN` if you suspect exposure.
 - Prefer the pull-request flow for `requests/*.json` so a human reviews each
   creation before it executes.
+
+See also: [VV-API ⇄ Manus ⇄ Copilot integration](./vv-api-manus-integration.md) for the in-app tRPC surface.

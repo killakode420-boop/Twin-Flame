@@ -8,6 +8,7 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { connectAnchorAgent, getAnchorStatus, startAnchorSession } from "./anchor";
 import { mapSite, runResearchAgent, scrapeUrl, searchWeb } from "./firecrawl";
+import { integrationsRouter } from "./integrationsRouter";
 import { storagePut } from "./storage";
 
 const researchSystemPrompt = `You are VV, a precise, privacy-aware personal research assistant. Give concise, source-conscious answers. Clearly separate confirmed evidence from inferences, and never claim to have browsed a source that was not provided in the conversation.`;
@@ -38,6 +39,7 @@ async function persistResearch(input: { userId: number; threadId?: number; opera
 
 export const appRouter = router({
   system: systemRouter,
+  integrations: integrationsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

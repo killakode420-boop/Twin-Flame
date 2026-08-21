@@ -128,3 +128,5 @@ never transmits their credentials.
   send email only — they never write to the repository or merge anything.
 - **Transport:** implicit TLS (port 465) with `AUTH LOGIN`/`AUTH PLAIN`;
   credentials are never logged or written to disk.
+
+See also: [VV-API ⇄ Manus ⇄ Copilot integration](./vv-api-manus-integration.md) for the in-app tRPC surface.
