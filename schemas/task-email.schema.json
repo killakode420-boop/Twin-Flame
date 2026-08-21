@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/GalyVverse/Twin-Flame/schemas/task-email.schema.json",
+  "title": "GalyVverse Task Email Dispatch Payload",
+  "description": "A payload that forwards a Copilot/GitHub task from this hub to the Manus email channels (workflow email and/or taskbot email). Submitted via repository_dispatch (client_payload.task), workflow_dispatch inputs, issue events, or an inline JSON in the TASK_EMAIL_PAYLOAD environment variable. Recipient addresses are NEVER part of the payload — they are resolved at runtime from the MANUS_WORKFLOW_EMAIL / MANUS_TASKBOT_EMAIL secrets per connections.json routing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subject", "body"],
+  "properties": {
+    "subject": {
+      "type": "string",
+      "description": "Email subject. CR/LF characters are stripped by the sender to prevent SMTP header injection.",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "body": {
+      "type": "string",
+      "description": "Plain-text email body describing the task.",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "channel": {
+      "type": "string",
+      "description": "Which Manus email channel(s) to send to. 'workflow' = MANUS_WORKFLOW_EMAIL (notifications), 'taskbot' = MANUS_TASKBOT_EMAIL (task intake), 'both' = both channels.",
+      "enum": ["workflow", "taskbot", "both"],
+      "default": "both"
+    },
+    "taskType": {
+      "type": "string",
+      "description": "Category of the task being dispatched.",
+      "enum": ["new-repo", "copilot-task", "application", "integration", "notification", "other"],
+      "default": "copilot-task"
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin of the dispatch, e.g. 'issues', 'copilot', 'workflow', 'manual'.",
+      "maxLength": 100
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary extra context (issue number, repo URL, labels). Serialized into the email body footer.",
+      "additionalProperties": true
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "When true, the sender only prints planned recipients and subject; no SMTP connection is made.",
+      "default": false
+    }
+  }
+}

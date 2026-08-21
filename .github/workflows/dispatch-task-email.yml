@@ -1,0 +1,139 @@
+name: Dispatch Task Email to Manus
+
+# Forwards Copilot/GitHub task events from this hub to the Manus email
+# channels (MANUS_WORKFLOW_EMAIL / MANUS_TASKBOT_EMAIL) via
+# scripts/send-task-email.js. All addresses and SMTP credentials come from
+# GitHub Actions secrets — nothing is committed to the repository.
+#
+# Script-injection prevention: untrusted event text (issue titles/bodies,
+# dispatch payloads) is passed to scripts ONLY via environment variables,
+# never interpolated into run: script bodies.
+
+on:
+  issues:
+    types: [opened, assigned]
+  repository_dispatch:
+    types: [copilot-task-created]
+  workflow_dispatch:
+    inputs:
+      subject:
+        description: "Email subject (task title)"
+        required: true
+      body:
+        description: "Email body (task description)"
+        required: true
+      channel:
+        description: "Manus channel to route to"
+        required: false
+        default: "both"
+        type: choice
+        options: [workflow, taskbot, both]
+      taskType:
+        description: "Task type"
+        required: false
+        default: "copilot-task"
+        type: choice
+        options: [new-repo, copilot-task, application, integration, notification, other]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dispatch-task-email-${{ github.event_name }}-${{ github.run_id }}
+
+jobs:
+  send-task-email:
+    runs-on: ubuntu-latest
+    # Skip issues labeled no-email.
+    if: github.event_name != 'issues' || !contains(github.event.issue.labels.*.name, 'no-email')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check required secrets
+        id: guard
+        env:
+          HAS_SMTP: ${{ secrets.SMTP_HOST != '' && secrets.SMTP_USER != '' && secrets.SMTP_PASS != '' }}
+          HAS_CHANNEL: ${{ secrets.MANUS_WORKFLOW_EMAIL != '' || secrets.MANUS_TASKBOT_EMAIL != '' }}
+        run: |
+          if [ "$HAS_SMTP" != "true" ] || [ "$HAS_CHANNEL" != "true" ]; then
+            echo "Required secrets are not configured (SMTP_HOST/SMTP_USER/SMTP_PASS and at least one MANUS_*_EMAIL). Skipping email dispatch."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build payload from issue event
+        if: steps.guard.outputs.configured == 'true' && github.event_name == 'issues'
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_ACTION: ${{ github.event.action }}
+        run: |
+          node -e '
+            const payload = {
+              subject: `[Twin-Flame task] ${process.env.ISSUE_TITLE || "(untitled issue)"}`,
+              body: `${process.env.ISSUE_BODY || "(no description)"}\n\nIssue: ${process.env.ISSUE_URL}`,
+              channel: "taskbot",
+              taskType: "copilot-task",
+              source: "issues",
+              metadata: {
+                issueNumber: Number(process.env.ISSUE_NUMBER),
+                action: process.env.ISSUE_ACTION,
+                url: process.env.ISSUE_URL,
+              },
+            };
+            require("node:fs").writeFileSync("/tmp/task-email-payload.json", JSON.stringify(payload));
+          '
+
+      - name: Build payload from repository_dispatch
+        if: steps.guard.outputs.configured == 'true' && github.event_name == 'repository_dispatch'
+        env:
+          TASK_JSON: ${{ toJson(github.event.client_payload.task) }}
+        run: |
+          node -e '
+            const task = JSON.parse(process.env.TASK_JSON || "null");
+            if (!task || typeof task !== "object") {
+              console.error("repository_dispatch is missing client_payload.task");
+              process.exit(1);
+            }
+            require("node:fs").writeFileSync("/tmp/task-email-payload.json", JSON.stringify(task));
+          '
+
+      - name: Build payload from workflow_dispatch
+        if: steps.guard.outputs.configured == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          IN_SUBJECT: ${{ github.event.inputs.subject }}
+          IN_BODY: ${{ github.event.inputs.body }}
+          IN_CHANNEL: ${{ github.event.inputs.channel }}
+          IN_TASKTYPE: ${{ github.event.inputs.taskType }}
+        run: |
+          node -e '
+            const payload = {
+              subject: process.env.IN_SUBJECT,
+              body: process.env.IN_BODY,
+              channel: process.env.IN_CHANNEL || "both",
+              taskType: process.env.IN_TASKTYPE || "copilot-task",
+              source: "workflow",
+            };
+            require("node:fs").writeFileSync("/tmp/task-email-payload.json", JSON.stringify(payload));
+          '
+
+      - name: Send task email
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          MANUS_WORKFLOW_EMAIL: ${{ secrets.MANUS_WORKFLOW_EMAIL }}
+          MANUS_TASKBOT_EMAIL: ${{ secrets.MANUS_TASKBOT_EMAIL }}
+        run: node scripts/send-task-email.js /tmp/task-email-payload.json

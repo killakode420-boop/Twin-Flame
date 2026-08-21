@@ -1,0 +1,76 @@
+{
+  "$comment": "GalyVverse connections registry. Links this repository's skills and integrations to the Manus email channels. NO email addresses, tokens, or credentials belong in this file — all addresses and SMTP credentials are provided at runtime via GitHub Actions secrets / environment variables referenced by name below.",
+  "repository": {
+    "owner": "GalyVverse",
+    "name": "Twin-Flame",
+    "role": "repo-creation hub and Copilot/Manus task bridge"
+  },
+  "channels": {
+    "manusWorkflowEmail": {
+      "envVar": "MANUS_WORKFLOW_EMAIL",
+      "secret": "MANUS_WORKFLOW_EMAIL",
+      "description": "Manus workflow email. Receives operational notifications: repo-creation results, CI/workflow status, and integration events. Address is never committed; it is resolved at runtime from the MANUS_WORKFLOW_EMAIL secret.",
+      "routing": ["notifications", "repo-created", "workflow-status", "ci"]
+    },
+    "manusTaskbotEmail": {
+      "envVar": "MANUS_TASKBOT_EMAIL",
+      "secret": "MANUS_TASKBOT_EMAIL",
+      "description": "Manus taskbot email (your personalized Manus task-intake address from Manus settings). Receives actionable task requests: emails sent here create tasks in Manus. Address is never committed; it is resolved at runtime from the MANUS_TASKBOT_EMAIL secret.",
+      "routing": ["task-intake", "copilot-task", "new-repo-request", "application"]
+    }
+  },
+  "integrations": [
+    {
+      "id": "github-repo-hub",
+      "kind": "automation",
+      "description": "JSON-driven repo creation for the GalyVverse org (hub.config.json, scripts/create-repo.js, .github/workflows/create-repo.yml).",
+      "triggers": ["repository_dispatch:manus-task-created", "workflow_dispatch", "push:requests/**.json"],
+      "channelRouting": {
+        "manusWorkflowEmail": "optional non-blocking notification when a repository is created",
+        "manusTaskbotEmail": "not routed"
+      }
+    },
+    {
+      "id": "copilot",
+      "kind": "task-source",
+      "description": "GitHub Copilot coding-agent tasks in this repository. Issues opened or assigned in this hub are forwarded as task emails so Manus can pick them up.",
+      "triggers": ["issues:opened", "issues:assigned", "repository_dispatch:copilot-task-created"],
+      "channelRouting": {
+        "manusWorkflowEmail": "copy for visibility when channel is 'both'",
+        "manusTaskbotEmail": "primary: actionable task creation in Manus"
+      }
+    },
+    {
+      "id": "manus",
+      "kind": "task-sink",
+      "description": "Manus task intake via email. Sending a message to the personalized Manus task email creates a task; the workflow email receives status/notification copies.",
+      "triggers": ["email"],
+      "channelRouting": {
+        "manusWorkflowEmail": "notifications and status",
+        "manusTaskbotEmail": "task creation"
+      }
+    },
+    {
+      "id": "anchor-browser",
+      "kind": "research-integration",
+      "credentialGated": true,
+      "description": "Anchor Browser agent access (see integration-notes.md). Server-side credential only; issued key is sent solely in the provider-designated API-key header and is never exposed to clients, logs, or this file.",
+      "triggers": ["explicit user-selected browser-assisted research action"],
+      "channelRouting": {
+        "manusWorkflowEmail": "integration status notifications only",
+        "manusTaskbotEmail": "not routed"
+      }
+    },
+    {
+      "id": "firecrawl",
+      "kind": "research-integration",
+      "credentialGated": true,
+      "description": "Firecrawl integration (see integration-notes.md). Uses a protected server-side FIRECRAWL_API_KEY; remains credential-gated until PKCE authorization completes. Keyless fallback is rate-limited and explicitly marked as limited access.",
+      "triggers": ["explicit user-selected research action"],
+      "channelRouting": {
+        "manusWorkflowEmail": "integration status notifications only",
+        "manusTaskbotEmail": "not routed"
+      }
+    }
+  ]
+}

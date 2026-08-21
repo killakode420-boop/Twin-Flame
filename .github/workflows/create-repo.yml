@@ -96,3 +96,57 @@ jobs:
             fi
             echo "::endgroup::"
           done
+
+  # Optional, non-blocking follow-up: email the Manus workflow channel when a
+  # repo-creation run completes. Skips itself entirely when the email secrets
+  # are not configured. Never fails the create-repo job.
+  notify:
+    needs: create-repo
+    if: always() && needs.create-repo.result == 'success'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check notification secrets
+        id: guard
+        env:
+          HAS_SMTP: ${{ secrets.SMTP_HOST != '' && secrets.SMTP_USER != '' && secrets.SMTP_PASS != '' }}
+          HAS_CHANNEL: ${{ secrets.MANUS_WORKFLOW_EMAIL != '' }}
+        run: |
+          if [ "$HAS_SMTP" != "true" ] || [ "$HAS_CHANNEL" != "true" ]; then
+            echo "Email notification secrets not configured; skipping notify."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send workflow notification
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          MANUS_WORKFLOW_EMAIL: ${{ secrets.MANUS_WORKFLOW_EMAIL }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node -e '
+            const payload = {
+              subject: "[Twin-Flame hub] Repository creation run completed",
+              body: `A create-repo run (${process.env.EVENT_NAME}) completed successfully.\n\nRun: ${process.env.RUN_URL}`,
+              channel: "workflow",
+              taskType: "notification",
+              source: "workflow",
+            };
+            require("node:fs").writeFileSync("/tmp/notify-payload.json", JSON.stringify(payload));
+          '
+          node scripts/send-task-email.js /tmp/notify-payload.json
