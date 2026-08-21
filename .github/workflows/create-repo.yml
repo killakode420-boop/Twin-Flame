@@ -1,0 +1,98 @@
+name: Create GalyVverse Repository
+
+on:
+  repository_dispatch:
+    types: [manus-task-created]
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Repository name (letters, digits, . _ -)"
+        required: true
+      description:
+        description: "Repository description"
+        required: false
+        default: ""
+      template:
+        description: "Template id registered in hub.config.json"
+        required: false
+        default: "web-db-user"
+      visibility:
+        description: "Repository visibility"
+        required: false
+        default: "private"
+        type: choice
+        options: [private, public, internal]
+  push:
+    branches: [main]
+    paths:
+      - "requests/**.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: create-repo-${{ github.event_name }}-${{ github.run_id }}
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Needed to diff added request files on push.
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Process repository_dispatch request
+        if: github.event_name == 'repository_dispatch'
+        env:
+          HUB_GITHUB_TOKEN: ${{ secrets.HUB_ORG_TOKEN }}
+          REPO_REQUEST: ${{ toJson(github.event.client_payload.request) }}
+        run: node scripts/create-repo.js
+
+      - name: Process workflow_dispatch request
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          HUB_GITHUB_TOKEN: ${{ secrets.HUB_ORG_TOKEN }}
+          IN_NAME: ${{ github.event.inputs.name }}
+          IN_DESCRIPTION: ${{ github.event.inputs.description }}
+          IN_TEMPLATE: ${{ github.event.inputs.template }}
+          IN_VISIBILITY: ${{ github.event.inputs.visibility }}
+        run: |
+          export REPO_REQUEST="$(node -e '
+            const req = {
+              name: process.env.IN_NAME,
+              description: process.env.IN_DESCRIPTION || undefined,
+              template: process.env.IN_TEMPLATE || undefined,
+              visibility: process.env.IN_VISIBILITY || undefined,
+              source: "workflow",
+            };
+            console.log(JSON.stringify(req));
+          ')"
+          node scripts/create-repo.js
+
+      - name: Process newly added request files
+        if: github.event_name == 'push'
+        env:
+          HUB_GITHUB_TOKEN: ${{ secrets.HUB_ORG_TOKEN }}
+        run: |
+          set -euo pipefail
+          added=$(git diff --name-only --diff-filter=A "${{ github.event.before }}" "${{ github.sha }}" -- 'requests/*.json' 'requests/**/*.json' || true)
+          if [ -z "$added" ]; then
+            echo "No newly added request files."
+            exit 0
+          fi
+          for file in $added; do
+            echo "::group::Processing $file"
+            if node -e "const r=require('./'+process.argv[1]); process.exit(r.dryRun===true?0:1)" "$file"; then
+              echo "Skipping $file (dryRun=true / example file)."
+            else
+              node scripts/create-repo.js "$file"
+            fi
+            echo "::endgroup::"
+          done

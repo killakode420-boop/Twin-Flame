@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/GalyVverse/Twin-Flame/schemas/repo-request.schema.json",
+  "title": "GalyVverse Repo Creation Request",
+  "description": "A request to create a new repository in the GalyVverse organization, seeded from a registered JSON template. Submitted via repository_dispatch (client_payload.request), workflow_dispatch inputs, or a JSON file committed under requests/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Repository name. Strict pattern prevents URL/path injection.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "description": "Short repository description.",
+      "maxLength": 350
+    },
+    "template": {
+      "type": "string",
+      "description": "Template id registered in hub.config.json under 'templates'.",
+      "default": "web-db-user"
+    },
+    "visibility": {
+      "type": "string",
+      "description": "Repository visibility.",
+      "enum": ["private", "public", "internal"],
+      "default": "private"
+    },
+    "topics": {
+      "type": "array",
+      "description": "GitHub topics to apply. Lowercase letters, digits, hyphens; max 50 chars each.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,49}$"
+      },
+      "maxItems": 20,
+      "uniqueItems": true
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin of the request, e.g. 'manus' or 'copilot'.",
+      "enum": ["manus", "copilot", "manual", "workflow"]
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "When true, the automation only logs planned actions and performs no GitHub API calls. Example/request files with dryRun=true are skipped by the push-triggered workflow.",
+      "default": false
+    }
+  }
+}

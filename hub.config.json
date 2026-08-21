@@ -1,0 +1,24 @@
+{
+  "$comment": "GalyVverse repo hub configuration. No secrets belong in this file — tokens are provided at runtime via the HUB_GITHUB_TOKEN environment variable (GitHub Actions secret HUB_ORG_TOKEN).",
+  "organization": "GalyVverse",
+  "apiBaseUrl": "https://api.github.com",
+  "defaults": {
+    "visibility": "private",
+    "auto_init": true,
+    "default_branch": "main",
+    "template": "web-db-user",
+    "has_issues": true,
+    "has_wiki": false,
+    "delete_branch_on_merge": true
+  },
+  "naming": {
+    "prefix": "vv-",
+    "slugify": true,
+    "lowercase": true,
+    "maxLength": 100,
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+  },
+  "templates": {
+    "web-db-user": "template.json"
+  }
+}

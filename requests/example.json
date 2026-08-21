@@ -1,0 +1,10 @@
+{
+  "$comment": "EXAMPLE request file. dryRun=true means the workflow skips it and the script performs no API calls. Copy this file, adjust the fields, set dryRun to false (or remove it), and commit to requests/ to trigger real repo creation.",
+  "name": "example-app",
+  "description": "Example application scaffolded from the web-db-user template.",
+  "template": "web-db-user",
+  "visibility": "private",
+  "topics": ["galyvverse", "manus", "template-web-db-user"],
+  "source": "manus",
+  "dryRun": true
+}
